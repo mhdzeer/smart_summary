@@ -103,35 +103,31 @@ function svs_v4_html($post) { ?>
             var text = $('#svs_raw_result').val().trim();
             if(!text) return;
 
-            // 1. تنظيف التذييلات (تأكيد الحذف)
-            text = text.split(/رابط الفيديو:|alkarbabadi|مشاهدة|views/i)[0].trim();
+            // 1. تنظيف الهيكل والفضلات (تنظيف جذري)
+            text = text.split(/الهيكل المطلوب|ابدأ بمقدمة|التعليمات الصارمة|رابط الفيديو|alkarbabadi/i)[0].trim();
 
             function advancedMarkdownToHtml(md) {
                 let html = md;
                 
-                // أولاً: تحويل العناوين الرئيسية (إذا كانت محاطة بـ **)
-                html = html.replace(/^\*\*(.*?)\*\*$/gm, '<h2>$1</h2>');
-
-                // ثانياً: العناوين الفرعية ###
+                // 🛑 أ- تنظيف الـ Markdown من الرموز الزائدة
+                // تحويل ### إلى h3
                 html = html.replace(/^### (.*?)$/gm, '<h3>$1</h3>');
-                
-                // ثالثاً: البولد العادي
+                // تحويل ** إلى bold
                 html = html.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
                 
-                // رابعاً: القوائم المرقمة (الحفاظ على الرقم كـ نص لضمان عدم حذفه)
-                // نحول 1. نص إلى <span class="list-item">1. نص</span>
-                html = html.replace(/^(\d+[\.\)]\s+.*?)$/gm, '<span class="list-item">$1</span>');
+                // 🛑 ب- معالجة القوائم المرقمة والرموز (بقاء الأرقام 100%)
+                // تحويل 1. نص إلى فقرة مرقمة
+                html = html.replace(/^(\d+[\.\)]\s+.*?)$/gm, '<p class="list-item"><strong>$1</strong></p>');
                 
-                // خامساً: القوائم المنقطة
-                html = html.replace(/^[\*\-]\s+(.*?)$/gm, '<li>$1</li>');
-                html = html.replace(/(?:<li>.*?<\/li>\n?)+/g, function(m) { return '<ul>' + m + '</ul>'; });
+                // تحويل * أو - إلى فقرة منقطة
+                html = html.replace(/^[\*\-]\s+(.*?)$/gm, '<p class="list-item">• $1</p>');
 
-                // سادساً: الفقرات (تغليف أي نص غير مغلف بـ وسوم)
+                // 🛑 ج- معالجة الفقرات
                 let lines = html.split('\n');
                 html = lines.map(line => {
                     line = line.trim();
                     if (!line) return "";
-                    if (line.startsWith('<h') || line.startsWith('<ul') || line.startsWith('<li') || line.startsWith('<span')) return line;
+                    if (line.startsWith('<h') || line.startsWith('<p') || line.startsWith('<ul')) return line;
                     return '<p>' + line + '</p>';
                 }).join('\n');
 
