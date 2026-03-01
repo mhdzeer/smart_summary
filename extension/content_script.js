@@ -1,4 +1,4 @@
-// Smart YT - MASTER CLIPBOARD ICON ENGINE (Gemini V 5.5)
+// Smart YT - ULTRA SUBMIT & COPY ENGINE (Gemini V 5.6)
 (async () => {
     if (window.SVS_LOCK) return;
     window.SVS_LOCK = true;
@@ -6,7 +6,7 @@
     const data = await chrome.storage.local.get(["svs_prompt", "svs_source_tab"]);
     if (!data.svs_prompt) { window.SVS_LOCK = false; return; }
 
-    console.log("⚡ STEALTH START: Targeting Copy Icon (V 5.5)...");
+    console.log("⚡ STEALTH START: Ultra Force Submit (V 5.6)...");
     await chrome.storage.local.remove("svs_prompt");
 
     let attempts = 0;
@@ -21,17 +21,42 @@
             clearInterval(findBox);
 
             ed.focus();
+            // مسح أي نص قديم
+            ed.innerText = "";
             document.execCommand('insertText', false, data.svs_prompt);
-            ['compositionstart', 'compositionend', 'beforeinput', 'input', 'change'].forEach(n => ed.dispatchEvent(new Event(n, { bubbles: true })));
 
-            setTimeout(() => {
-                const sendBtn = document.querySelector('button[aria-label*="Send"], button[aria-label*="ارسال"], .send-button');
-                if (sendBtn && !sendBtn.disabled) sendBtn.click();
-                else ed.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', code: 'Enter', keyCode: 13, which: 13, bubbles: true }));
-                waitForGeminiToFinishAndCopy(data.svs_source_tab);
-            }, 1200);
+            // تفعيل كاشفات الحركة
+            ['compositionstart', 'compositionend', 'beforeinput', 'input', 'change', 'keyup', 'keydown'].forEach(n => {
+                ed.dispatchEvent(new Event(n, { bubbles: true }));
+            });
+
+            // --- حلقة الإرسال الفائقة (V 5.6) ---
+            let subAttempts = 0;
+            const subLoop = setInterval(() => {
+                subAttempts++;
+                const sendBtn = document.querySelector('button[aria-label*="Send"], button[aria-label*="ارسال"], .send-button, [data-test-id="send-button"]');
+
+                if (sendBtn && !sendBtn.disabled) {
+                    // إطلاق نقرات فيزيائية متتابعة
+                    ['pointerdown', 'mousedown', 'pointerup', 'mouseup', 'click'].forEach(evt => {
+                        const e = (evt.startsWith('pointer')) ? new PointerEvent(evt, { bubbles: true, pointerType: 'mouse' }) : new MouseEvent(evt, { bubbles: true });
+                        sendBtn.dispatchEvent(e);
+                    });
+                    console.log("🚀 Forced Ultra Click (Attempt " + subAttempts + ")");
+                }
+
+                // محاكاة Enter
+                ed.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', code: 'Enter', keyCode: 13, which: 13, bubbles: true }));
+
+                // فحص البدء
+                if (document.querySelector('.model-response-text, .message-content-wrapper, [role="progressbar"]') || subAttempts > 20) {
+                    console.log("✅ Gemini Started!");
+                    clearInterval(subLoop);
+                    waitForGeminiToFinishAndCopy(data.svs_source_tab);
+                }
+            }, 800);
         }
-    }, 1500);
+    }, 1200);
 
     function waitForGeminiToFinishAndCopy(sourceTabId) {
         let lastResult = "";
@@ -44,7 +69,7 @@
                     stableCount++;
                     if (stableCount >= 5) {
                         clearInterval(checkInt);
-                        clickCopyIconAndGrab(sourceTabId);
+                        extractFromCopyBtn(sourceTabId);
                     }
                 } else { stableCount = 0; }
                 lastResult = latest;
@@ -52,42 +77,27 @@
         }, 3000);
     }
 
-    async function clickCopyIconAndGrab(sourceTabId) {
-        console.log("💎 Final Step: Locating and Clicking the Copy button...");
-
-        // البحث عن أيقونة النسخ في آخر رد
-        const allCopyBtns = document.querySelectorAll('button[aria-label*="Copy"], button[aria-label*="نسخ"], .copy-button');
-        let btn = allCopyBtns[allCopyBtns.length - 1];
-
-        if (btn) {
-            btn.click(); // نقرة على أيقونة النسخ!
-            console.log("🚀 Clicked Copy Icon!");
-
-            // انتظار الحافظة (1 ثانية) ثم القراءة
+    async function extractFromCopyBtn(sourceTabId) {
+        const btns = document.querySelectorAll('button[aria-label*="Copy"], button[aria-label*="نسخ"], .copy-button');
+        let b = btns[btns.length - 1];
+        if (b) {
+            b.click();
             setTimeout(() => {
                 const ta = document.createElement("textarea");
                 document.body.appendChild(ta);
                 ta.focus();
                 document.execCommand('paste');
-                let markdown = ta.value.trim();
+                let md = ta.value.trim();
                 document.body.removeChild(ta);
-
-                if (markdown && markdown.length > 100) {
-                    console.log("✅ Received RAW Markdown from Keyboard!");
-
-                    // تنظيف الهيكل المطلوب (الفلتر المطوّر)
-                    markdown = markdown.split(/الهيكل المطلوبة|ابدأ بمقدمة/i)[0].trim();
-
-                    chrome.runtime.sendMessage({ action: "done", text: markdown, target: sourceTabId });
-                } else {
-                    // Fallback لو فشلت الحافظة
-                    let domText = document.querySelectorAll('.model-response-text, .message-content-wrapper');
-                    chrome.runtime.sendMessage({ action: "done", text: domText[domText.length - 1].innerText, target: sourceTabId });
+                if (md && md.length > 100) chrome.runtime.sendMessage({ action: "done", text: md, target: sourceTabId });
+                else {
+                    const fallback = document.querySelectorAll('.model-response-text');
+                    chrome.runtime.sendMessage({ action: "done", text: fallback[fallback.length - 1].innerText, target: sourceTabId });
                 }
             }, 1000);
         } else {
-            let domText = document.querySelectorAll('.model-response-text, .message-content-wrapper');
-            chrome.runtime.sendMessage({ action: "done", text: domText[domText.length - 1].innerText, target: sourceTabId });
+            const fallback = document.querySelectorAll('.model-response-text');
+            chrome.runtime.sendMessage({ action: "done", text: fallback[fallback.length - 1].innerText, target: sourceTabId });
         }
     }
 })();

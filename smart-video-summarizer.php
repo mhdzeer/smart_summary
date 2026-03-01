@@ -107,29 +107,29 @@ function svs_v4_html($post) { ?>
             text = text.split(/الهيكل المطلوب|ابدأ بمقدمة|التعليمات الصارمة|رابط الفيديو|alkarbabadi/i)[0].trim();
 
             function advancedMarkdownToHtml(md) {
-                let html = md;
+                let html = md.trim();
                 
-                // 🛑 أ- تنظيف الـ Markdown من الرموز الزائدة
-                // تحويل ### إلى h3
+                // 🛑 أ- تنظيف الهيكل والرموز
                 html = html.replace(/^### (.*?)$/gm, '<h3>$1</h3>');
-                // تحويل ** إلى bold
+                html = html.replace(/^## (.*?)$/gm, '<h2>$1</h2>');
                 html = html.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
                 
-                // 🛑 ب- معالجة القوائم المرقمة والرموز (بقاء الأرقام 100%)
-                // تحويل 1. نص إلى فقرة مرقمة
-                html = html.replace(/^(\d+[\.\)]\s+.*?)$/gm, '<p class="list-item"><strong>$1</strong></p>');
+                // 🛑 ب- حماية القوائم (تحويل كل سطر يبدأ برقم إلى فقرة مستقلة)
+                // نضمن وجود سطر جديد قبل وبعد الفقرات المرقمة لعدم اندماجها
+                html = html.replace(/^(\d+[\.\)]\s+.*?)$/gm, '\n<p class="list-item"><strong>$1</strong></p>\n');
                 
-                // تحويل * أو - إلى فقرة منقطة
-                html = html.replace(/^[\*\-]\s+(.*?)$/gm, '<p class="list-item">• $1</p>');
+                // تحويل النقاط (Bullet points)
+                html = html.replace(/^[\*\-]\s+(.*?)$/gm, '\n<p class="list-item">• $1</p>\n');
 
-                // 🛑 ج- معالجة الفقرات
+                // 🛑 ج- معالجة الفقرات (خاتمة ومقدمة) بصورة سليمة
                 let lines = html.split('\n');
                 html = lines.map(line => {
                     line = line.trim();
                     if (!line) return "";
-                    if (line.startsWith('<h') || line.startsWith('<p') || line.startsWith('<ul')) return line;
+                    // إذا كان السطر مغلفاً بـ h3 أو p من الخطوة السابقة، اتركه كما هو
+                    if (line.startsWith('<h') || line.startsWith('<p')) return line;
                     return '<p>' + line + '</p>';
-                }).join('\n');
+                }).join('');
 
                 return html;
             }
