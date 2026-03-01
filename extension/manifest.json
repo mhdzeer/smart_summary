@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
-  "name": "Smart YT Summarizer Bridge",
-  "version": "1.1",
+  "name": "Smart Arabic GPT Video Summarizer (PRO)",
+  "version": "6.1.0",
   "description": "Auto-bridge between WordPress and Gemini.",
   "permissions": [
     "activeTab",

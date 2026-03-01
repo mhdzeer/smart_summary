@@ -1,8 +1,8 @@
 <?php
 /**
- * Plugin Name: Smart Arabic GPT Video Summarizer
- * Description: (V 6.0) - نظام القوالب الذكية والنشر الفاخر.
- * Version: 6.0
+ * Plugin Name: Smart Arabic GPT Video Summarizer (PRO)
+ * Description: (V 6.1.0) - نظام القوالب الذكية والنشر الفاخر.
+ * Version: 6.1.0
  * Author: Abu Taher
  */
 
