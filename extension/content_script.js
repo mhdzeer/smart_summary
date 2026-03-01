@@ -1,4 +1,4 @@
-// Smart YT - NUCLEAR SUBMIT & EXTRACTION ENGINE (Gemini V 5.8)
+// Smart YT - THE FINAL KEY (Gemini V 6.1)
 (async () => {
     if (window.SVS_LOCK) return;
     window.SVS_LOCK = true;
@@ -6,7 +6,7 @@
     const data = await chrome.storage.local.get(["svs_prompt", "svs_source_tab"]);
     if (!data.svs_prompt) { window.SVS_LOCK = false; return; }
 
-    console.log("🚀 NUCLEAR OPTION START (V 5.8)...");
+    console.log("🔑 THE FINAL KEY START (V 6.1)...");
     await chrome.storage.local.remove("svs_prompt");
 
     let attempts = 0;
@@ -20,98 +20,105 @@
             window.SVS_SENT = true;
             clearInterval(findBox);
 
+            console.log("✅ Box Found. Priming...");
             ed.focus();
 
-            // 🛑 1. تنظيف عميق وتهييج الصندوق
+            // 🛑 1. تنظيف عميق وتحفيز الصندوق
             ed.innerText = "";
-            ed.dispatchEvent(new Event('focus', { bubbles: true }));
-
-            // 🛑 2. إدراج النص عبر InputEvent المطور
             document.execCommand('insertText', false, data.svs_prompt);
 
-            // تنبيهات الحواس المتعددة
-            const evts = ['input', 'change', 'beforeinput', 'compositionend', 'textInput'];
-            evts.forEach(n => {
-                const e = (n === 'textInput') ? new CustomEvent(n, { detail: { data: data.svs_prompt } }) : new Event(n, { bubbles: true });
-                ed.dispatchEvent(e);
-            });
+            // 🛑 2. "خداع" النظام (Focus/Blur/Input)
+            setTimeout(() => {
+                ed.dispatchEvent(new Event('input', { bubbles: true }));
+                ed.blur();
+                setTimeout(() => {
+                    ed.focus();
+                    ed.dispatchEvent(new Event('input', { bubbles: true }));
+                    // إطلاق أحداث لوحة المفاتيح التنبيهية
+                    ['keydown', 'keypress', 'keyup'].forEach(n => {
+                        ed.dispatchEvent(new KeyboardEvent(n, { key: 'a', bubbles: true }));
+                    });
 
-            setTimeout(() => { nuclearSubmitLoop(ed, data.svs_source_tab); }, 1000);
+                    setTimeout(() => { finalKeySubmitLoop(ed, data.svs_source_tab); }, 800);
+                }, 200);
+            }, 500);
         }
-        if (attempts > 50) clearInterval(findBox);
     }, 1500);
 
-    function nuclearSubmitLoop(ed, sourceTabId) {
+    function finalKeySubmitLoop(ed, sourceTabId) {
         let subAttempts = 0;
         const subLoop = setInterval(() => {
             subAttempts++;
 
-            // 🛑 3. البحث "النووي" عن الزر (أي زر أو ديف يحمل سمة إرسال)
             const btnSels = [
                 'button[aria-label*="Send"]', 'button[aria-label*="ارسال"]',
                 '.send-button', '[data-test-id="send-button"]',
-                'div[role="button"][aria-label*="Send"]',
-                'mat-icon[aria-label*="Send"]', 'svg[aria-label*="Send"]'
+                'button:has(mat-icon)', 'div[role="button"][aria-label*="Send"]'
             ];
 
             btnSels.forEach(s => {
                 const el = document.querySelector(s);
                 if (el) {
                     const target = el.closest('button') || el.closest('[role="button"]') || el;
-                    target.disabled = false;
                     target.removeAttribute('disabled');
+                    target.disabled = false;
+                    target.setAttribute('aria-disabled', 'false');
 
-                    // نقرات فيزيائية لكل الجزيئات
-                    ['pointerdown', 'mousedown', 'pointerup', 'mouseup', 'click'].forEach(evt => {
-                        const e = new MouseEvent(evt, { bubbles: true, cancelable: true, view: window });
-                        target.dispatchEvent(e);
-                        // ضرب العمق (الأيقونات بداخله)
-                        target.querySelectorAll('*').forEach(child => child.dispatchEvent(e));
-                    });
+                    // 🛑 3. النقر "الفيزيائي الحقيقي" (PointerEvents)
+                    const pDown = new PointerEvent('pointerdown', { bubbles: true, cancelable: true, pointerType: 'mouse', button: 0 });
+                    const mDown = new MouseEvent('mousedown', { bubbles: true, cancelable: true, button: 0 });
+                    const pUp = new PointerEvent('pointerup', { bubbles: true, cancelable: true, pointerType: 'mouse', button: 0 });
+                    const mUp = new MouseEvent('mouseup', { bubbles: true, cancelable: true, button: 0 });
+                    const click = new MouseEvent('click', { bubbles: true, cancelable: true, button: 0 });
+
+                    target.dispatchEvent(pDown);
+                    target.dispatchEvent(mDown);
+                    target.dispatchEvent(pUp);
+                    target.dispatchEvent(mUp);
+                    target.dispatchEvent(click);
+
+                    // الضغط على العناصر الداخلية
+                    target.querySelectorAll('*').forEach(c => c.dispatchEvent(click));
                 }
             });
 
-            // 🛑 4. خدعة مفتاح Enter "المزدوج"
-            const options = { key: 'Enter', code: 'Enter', keyCode: 13, which: 13, bubbles: true };
-            ed.dispatchEvent(new KeyboardEvent('keydown', options));
-            ed.dispatchEvent(new KeyboardEvent('keypress', options));
+            // 🛑 4. ضربات Enter "المتلاحقة" (Triple Tap)
+            const enter = { key: 'Enter', code: 'Enter', keyCode: 13, which: 13, bubbles: true, cancelable: true };
+            ed.dispatchEvent(new KeyboardEvent('keydown', enter));
+            ed.dispatchEvent(new KeyboardEvent('keypress', enter));
 
-            // محاولة إدراج سطر جديد كحل أخير (أحياناً هذا يطلق الإرسال)
-            if (subAttempts % 3 === 0) {
-                document.execCommand('insertText', false, '\n');
-                ed.dispatchEvent(new KeyboardEvent('keydown', options));
+            // حل بديل: إرسال Enter عبر Command
+            if (subAttempts % 2 === 0) {
+                document.execCommand('insertParagraph'); // محاكاة ضغطة Enter في contentEditable
             }
 
-            // فحص البدء (ظهور علامة التحميل أو اختفاء مربع النص أو ظهور رد)
-            const isWorking = document.querySelector('.model-response-text, .message-content-wrapper, [role="progressbar"], button[aria-label*="Stop"]');
-            if (isWorking || subAttempts > 25) {
-                console.log("✅ NUCLEAR HIT: Process started!");
+            // فحص البدء (هل بدأ Gemini الكتابة؟)
+            const activeLine = document.querySelector('.model-response-text, .message-content-wrapper, [role="progressbar"], button[aria-label*="Stop"]');
+            if (activeLine || subAttempts > 25) {
+                console.log("✅ THE KEY UNLOCKED: Submission confirmed!");
                 clearInterval(subLoop);
-                waitForGeminiToFinishAndCopy(sourceTabId);
+                waitForGeminiComplete(sourceTabId);
             }
         }, 800);
     }
 
-    function waitForGeminiToFinishAndCopy(sourceTabId) {
-        let lastResult = "";
+    function waitForGeminiComplete(sourceTabId) {
+        let lastRes = "";
         let stableCount = 0;
-        const checkInt = setInterval(() => {
+        const check = setInterval(() => {
             const res = document.querySelectorAll('.model-response-text, .message-content-wrapper');
             if (res.length > 0) {
                 let latest = res[res.length - 1].innerText;
-                if (latest && latest.trim() === lastResult.trim() && latest.length > 200) {
+                if (latest && latest.trim() === lastRes.trim() && latest.length > 200) {
                     stableCount++;
-                    if (stableCount >= 5) {
-                        clearInterval(checkInt);
-                        extractFromCopyIcon(sourceTabId);
-                    }
+                    if (stableCount >= 5) { clearInterval(check); extractFinalMarkdown(sourceTabId); }
                 } else { stableCount = 0; }
-                lastResult = latest;
+                lastRes = latest;
             }
         }, 3000);
     }
 
-    async function extractFromCopyIcon(sourceTabId) {
+    async function extractFinalMarkdown(sourceTabId) {
         const btns = document.querySelectorAll('button[aria-label*="Copy"], button[aria-label*="نسخ"], .copy-button');
         let b = btns[btns.length - 1];
         if (b) {
