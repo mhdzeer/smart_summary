@@ -1,4 +1,4 @@
-// Smart YT - THE HAMMER SUBMIT ENGINE (Gemini V 5.7)
+// Smart YT - NUCLEAR SUBMIT & EXTRACTION ENGINE (Gemini V 5.8)
 (async () => {
     if (window.SVS_LOCK) return;
     window.SVS_LOCK = true;
@@ -6,15 +6,15 @@
     const data = await chrome.storage.local.get(["svs_prompt", "svs_source_tab"]);
     if (!data.svs_prompt) { window.SVS_LOCK = false; return; }
 
-    console.log("🔨 THE HAMMER START: Final Force Attempt (V 5.7)...");
+    console.log("🚀 NUCLEAR OPTION START (V 5.8)...");
     await chrome.storage.local.remove("svs_prompt");
 
     let attempts = 0;
     const findBox = setInterval(() => {
         attempts++;
-        const selectors = ['div[contenteditable="true"]', 'rich-textarea div', '.prompt-text-area', 'textarea'];
+        const sel = ['div[contenteditable="true"]', 'rich-textarea div', '.prompt-text-area', 'textarea', '[role="textbox"]'];
         let ed = null;
-        for (let s of selectors) { ed = document.querySelector(s); if (ed) break; }
+        for (let s of sel) { ed = document.querySelector(s); if (ed) break; }
 
         if (ed && !window.SVS_SENT) {
             window.SVS_SENT = true;
@@ -22,58 +22,70 @@
 
             ed.focus();
 
-            // 🛑 1. إيقاظ المحرك (كتابة وهمية تمهيدية)
-            document.execCommand('selectAll', false, null);
-            document.execCommand('delete', false, null);
-            document.execCommand('insertText', false, " ");
-            ed.dispatchEvent(new Event('input', { bubbles: true }));
+            // 🛑 1. تنظيف عميق وتهييج الصندوق
+            ed.innerText = "";
+            ed.dispatchEvent(new Event('focus', { bubbles: true }));
 
-            setTimeout(() => {
-                // 🛑 2. وضع النص الحقيقي
-                document.execCommand('selectAll', false, null);
-                document.execCommand('insertText', false, data.svs_prompt);
+            // 🛑 2. إدراج النص عبر InputEvent المطور
+            document.execCommand('insertText', false, data.svs_prompt);
 
-                // إرسال كافة التنبيهات اللازمة للأطر البرمجية (Angular/React)
-                ['input', 'change', 'compositionend', 'beforeinput'].forEach(n => {
-                    ed.dispatchEvent(new Event(n, { bubbles: true }));
-                });
+            // تنبيهات الحواس المتعددة
+            const evts = ['input', 'change', 'beforeinput', 'compositionend', 'textInput'];
+            evts.forEach(n => {
+                const e = (n === 'textInput') ? new CustomEvent(n, { detail: { data: data.svs_prompt } }) : new Event(n, { bubbles: true });
+                ed.dispatchEvent(e);
+            });
 
-                setTimeout(() => { hammerSubmitLoop(ed, data.svs_source_tab); }, 1000);
-            }, 500);
+            setTimeout(() => { nuclearSubmitLoop(ed, data.svs_source_tab); }, 1000);
         }
-    }, 1200);
+        if (attempts > 50) clearInterval(findBox);
+    }, 1500);
 
-    function hammerSubmitLoop(ed, sourceTabId) {
+    function nuclearSubmitLoop(ed, sourceTabId) {
         let subAttempts = 0;
         const subLoop = setInterval(() => {
             subAttempts++;
 
-            // محاولة إيجاد الزر بكل الوسائل الممكنة (بما فيها الأيقونة)
-            const sendBtn = document.querySelector('button[aria-label*="Send"], button[aria-label*="ارسال"], .send-button, [data-test-id="send-button"], button:has(mat-icon)');
+            // 🛑 3. البحث "النووي" عن الزر (أي زر أو ديف يحمل سمة إرسال)
+            const btnSels = [
+                'button[aria-label*="Send"]', 'button[aria-label*="ارسال"]',
+                '.send-button', '[data-test-id="send-button"]',
+                'div[role="button"][aria-label*="Send"]',
+                'mat-icon[aria-label*="Send"]', 'svg[aria-label*="Send"]'
+            ];
 
-            if (sendBtn) {
-                // 🛑 3. "قهر" حالة التعطيل
-                sendBtn.disabled = false;
-                sendBtn.removeAttribute('disabled');
-                sendBtn.setAttribute('aria-disabled', 'false');
+            btnSels.forEach(s => {
+                const el = document.querySelector(s);
+                if (el) {
+                    const target = el.closest('button') || el.closest('[role="button"]') || el;
+                    target.disabled = false;
+                    target.removeAttribute('disabled');
 
-                // إرسال نقرات فيزيائية لكل طبقات الزر
-                ['pointerdown', 'mousedown', 'pointerup', 'mouseup', 'click'].forEach(evt => {
-                    const e = (evt.startsWith('pointer')) ? new PointerEvent(evt, { bubbles: true, pointerType: 'mouse' }) : new MouseEvent(evt, { bubbles: true });
-                    sendBtn.dispatchEvent(e);
-                    // الضغط على ما بداخل الزر أيضاً (الأيقونات/السبان)
-                    sendBtn.querySelectorAll('*').forEach(child => child.dispatchEvent(e));
-                });
-                console.log("🔨 Hammer Click Attempt " + subAttempts);
+                    // نقرات فيزيائية لكل الجزيئات
+                    ['pointerdown', 'mousedown', 'pointerup', 'mouseup', 'click'].forEach(evt => {
+                        const e = new MouseEvent(evt, { bubbles: true, cancelable: true, view: window });
+                        target.dispatchEvent(e);
+                        // ضرب العمق (الأيقونات بداخله)
+                        target.querySelectorAll('*').forEach(child => child.dispatchEvent(e));
+                    });
+                }
+            });
+
+            // 🛑 4. خدعة مفتاح Enter "المزدوج"
+            const options = { key: 'Enter', code: 'Enter', keyCode: 13, which: 13, bubbles: true };
+            ed.dispatchEvent(new KeyboardEvent('keydown', options));
+            ed.dispatchEvent(new KeyboardEvent('keypress', options));
+
+            // محاولة إدراج سطر جديد كحل أخير (أحياناً هذا يطلق الإرسال)
+            if (subAttempts % 3 === 0) {
+                document.execCommand('insertText', false, '\n');
+                ed.dispatchEvent(new KeyboardEvent('keydown', options));
             }
 
-            // محاكاة مفتاح Enter بكل القوة
-            const enter = { key: 'Enter', code: 'Enter', keyCode: 13, which: 13, bubbles: true };
-            ed.dispatchEvent(new KeyboardEvent('keydown', enter));
-
-            // هل نجحنا؟ (ابحث عن مؤشر الرد)
-            if (document.querySelector('.model-response-text, .message-content-wrapper, [role="progressbar"]') || subAttempts > 20) {
-                console.log("✅ THE HAMMER SUCCESS!");
+            // فحص البدء (ظهور علامة التحميل أو اختفاء مربع النص أو ظهور رد)
+            const isWorking = document.querySelector('.model-response-text, .message-content-wrapper, [role="progressbar"], button[aria-label*="Stop"]');
+            if (isWorking || subAttempts > 25) {
+                console.log("✅ NUCLEAR HIT: Process started!");
                 clearInterval(subLoop);
                 waitForGeminiToFinishAndCopy(sourceTabId);
             }
@@ -89,14 +101,17 @@
                 let latest = res[res.length - 1].innerText;
                 if (latest && latest.trim() === lastResult.trim() && latest.length > 200) {
                     stableCount++;
-                    if (stableCount >= 5) { clearInterval(checkInt); extractFromCopyBtn(sourceTabId); }
+                    if (stableCount >= 5) {
+                        clearInterval(checkInt);
+                        extractFromCopyIcon(sourceTabId);
+                    }
                 } else { stableCount = 0; }
                 lastResult = latest;
             }
         }, 3000);
     }
 
-    async function extractFromCopyBtn(sourceTabId) {
+    async function extractFromCopyIcon(sourceTabId) {
         const btns = document.querySelectorAll('button[aria-label*="Copy"], button[aria-label*="نسخ"], .copy-button');
         let b = btns[btns.length - 1];
         if (b) {
