@@ -1,56 +1,46 @@
-// WordPress Automatic Result Handler
-console.log("⚡ Smart YT WP: Monitoring for results...");
+// WordPress-to-Extension Bridge Engine (V 4.4)
+console.log("⚡ Smart YT Bridge: ACTIVE and listening for signals...");
 
-// مراقبة الرسائل القادمة من Gemini
+// 1. كاشف الاتصال للتأكيد لووردبريس
+window.addEventListener('SVS_CHECK_CONNECTION', () => {
+    window.dispatchEvent(new CustomEvent('SVS_CONNECTION_OK'));
+});
+
+// 2. استقبال إشارة البدء
+window.addEventListener('SVS_START_AUTO', (e) => {
+    const videoUrl = e.detail.url;
+    console.log("🚀 Bridge: Received start signal for: ", videoUrl);
+
+    // إرسال تحديث لووردبريس
+    window.dispatchEvent(new CustomEvent('SVS_LOG', { detail: { msg: '✅ تم استلام الرابط من الإضافة! جاري فتح Gemini...', done: false } }));
+
+    const prompt = "قم بكتابة مقال تلخيصي احترافي وعميق باللغة العربية الفصحى لـ فيديو يوتيوب من الرابط هذا: " + videoUrl + "\n\nالقواعد:\n1. ابدأ مباشرة بمقدمة بليغة.\n2. ممنوع ذكر اسم الشيخ أو القناة.\n3. استخدم h3 و ul للنقاط.\n4. ممنوع مخاطبتي بـ 'إليك'.";
+
+    // طلب فتح التبويب الجديد من الباك-غراوند وحفظ الرابط بذاكرة الإضافة
+    chrome.runtime.sendMessage({ action: "open_gemini", prompt: prompt });
+});
+
+// 3. استقبال النتائج النهائية من Gemini
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     if (request.action === "paste_result") {
-        console.log("⚡ WP: Processing result from Gemini...");
+        console.log("⚡ Bridge: Final result arrived from background!");
 
-        let raw = request.text;
+        const resultText = request.text;
+        const textarea = document.getElementById('svs_raw_result');
 
-        // --- تنظيف المحتوى بذكاء (إزالة الروابط، الأسماء، المشاهدات) ---
-        // حذف رابط الفيديو وكل ما يتبعه إذا كان تكراراً
-        raw = raw.replace(/رابط الفيديو:.*?\n/gi, "");
-        raw = raw.replace(/alkarbabadi\.net.*?\n/gi, "");
-        raw = raw.replace(/\d+\s*views/gi, "");
-        raw = raw.replace(/الوحدة\s*الإسلامية/gi, ""); // حذف العنوان المتكرر
+        if (textarea) {
+            textarea.value = resultText;
+            textarea.dispatchEvent(new Event('input', { bubbles: true }));
 
-        // ضبط التنسيق HTML
-        let html = raw.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
-        html = html.replace(/### (.*?)\n/g, '<h3>$1</h3>');
-        html = html.replace(/\n\n/g, '</p><p>');
-        html = '<hr><p>' + html + '</p>';
+            // إبلاغ ووردربريس بالنجاح
+            window.dispatchEvent(new CustomEvent('SVS_LOG', { detail: { msg: '✅ تم جلب التلخيص ونقله لووردبريس بنجاح!', done: true } }));
 
-        // 1. محاولة الإدراج في Gutenberg
-        let success = false;
-        try {
-            const editor = window.wp?.data?.dispatch('core/block-editor') || window.wp?.data?.dispatch('core/editor');
-            const select = window.wp?.data?.select('core/block-editor') || window.wp?.data?.select('core/editor');
-            if (editor && editor.insertBlocks) {
-                const block = window.wp.blocks.createBlock('core/freeform', { content: html });
-                editor.insertBlocks(block, select.getBlockCount());
-                success = true;
-            }
-        } catch (e) { }
-
-        // 2. محاولة TinyMCE
-        if (!success && window.tinyMCE?.activeEditor) {
-            try {
-                window.tinyMCE.activeEditor.setContent(window.tinyMCE.activeEditor.getContent() + html);
-                success = true;
-            } catch (e) { }
-        }
-
-        // 3. خانة التحديث اليدوي
-        const resArea = document.getElementById('svs_raw_result');
-        if (resArea) {
-            resArea.value = raw.trim();
-        }
-
-        if (success) {
-            alert("✅ تم التلخيص والنشر آلياً بنظافة تامة!");
+            // الضغط على زر التنسيق والنشر تلقائياً
+            const formatBtn = document.getElementById('svs_btn_format_final');
+            if (formatBtn) formatBtn.click();
         } else {
-            alert("✅ تم جلب التلخيص! يرجى لصقه يدوياً.");
+            console.error("❌ Could not find the result textarea.");
+            alert("✅ تم جلب التلخيص! فضلاً الصقه يدوياً في الخانة.");
         }
     }
 });
