@@ -1,51 +1,34 @@
-// WordPress-to-Extension Bridge Engine (V 4.5)
-console.log("⚡ Smart YT Bridge: ACTIVE and listening for signals...");
+// Smart YT Bridge - V 4.9 Premium Formatting Prompt
+console.log("⚡ Smart YT Bridge: ACTIVE (V 4.9 Premium)...");
 
-// منع تكرار استقبال الإشارة في نفس المحاولة
-let isProcessing = false;
+window.addEventListener('SVS_CHECK_CONNECTION', () => { window.dispatchEvent(new CustomEvent('SVS_CONNECTION_OK')); });
 
-// 1. كاشف الاتصال
-window.addEventListener('SVS_CHECK_CONNECTION', () => {
-    window.dispatchEvent(new CustomEvent('SVS_CONNECTION_OK'));
-});
-
-// 2. استقبال إشارة البدء
 window.addEventListener('SVS_START_AUTO', (e) => {
-    if (isProcessing) return; // منع التكرار
-    isProcessing = true;
-
     const videoUrl = e.detail.url;
-    console.log("🚀 Bridge: Received start signal for: ", videoUrl);
 
-    // إرسال تحديث لووردبريس
-    window.dispatchEvent(new CustomEvent('SVS_LOG', { detail: { msg: '✅ تم استلام الرابط! جاري فتح Gemini بصمت...', done: false } }));
+    // --- البرومبت الفاخر والحصري للطباعة والنشر ---
+    const prompt = "أنت كاتب مقالات ديني واجتماعي محترف. قم بكتابة مقال تلخيصي عميق وبليغ باللغة العربية الفصحى لهذا الفيديو:\n" + videoUrl + "\n\n" +
+        "الهيكل المطلوبة (مهم جداً):\n" +
+        "1. ابدأ بمقدمة روحانية وبليغة جداً.\n" +
+        "2. استخدم عناوين h3 جذابة للنقاط الرئيسية.\n" +
+        "3. يجب أن تكون التفاصيل على شكل قائمة مرقمة (1. 2. 3. 4.) لتسهيل القراءة والطباعة.\n" +
+        "4. ممنوع ذكر اسم الشيخ أو القناة أو كلمة 'إليك' أو 'رابط'.\n" +
+        "5. اجعل النص غنياً بالمعاني والمصطلحات البليغة ليكون مناسباً للنشر كـ مقال صحفي فاخر.";
 
-    const prompt = "قم بكتابة مقال تلخيصي احترافي وعميق باللغة العربية الفصحى لهذا الفيديو:\n" + videoUrl + "\n\nالقواعد:\n1. ابدأ مباشرة بمقدمة بليغة.\n2. ممنوع ذكر اسم الشيخ أو القناة.\n3. استخدم h3 و ul للنقاط.\n4. ممنوع مخاطبتي بـ 'إليك'.";
-
-    // طلب فتح التبويب وتحميل البرومبت لمرة واحدة فقط
+    window.dispatchEvent(new CustomEvent('SVS_LOG', { detail: { msg: '✅ تم توجيه الروبوت لكتابة مقال فاخر... Gemini يعمل صامتاً الآن.', done: false } }));
     chrome.runtime.sendMessage({ action: "open_gemini", prompt: prompt });
 });
 
-// 3. استقبال النتائج النهائية
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     if (request.action === "paste_result") {
-        isProcessing = false; // فك قفل المحاولة
-
-        console.log("⚡ Bridge: Final result arrived from background!");
-        const resultText = request.text;
         const textarea = document.getElementById('svs_raw_result');
-
         if (textarea) {
-            textarea.value = resultText;
+            textarea.value = request.text;
             textarea.dispatchEvent(new Event('input', { bubbles: true }));
+            window.dispatchEvent(new CustomEvent('SVS_LOG', { detail: { msg: '✅ تم استلام المقال الفاخر! جاري التنسيق النهائي...', done: true } }));
 
-            // إبلاغ ووردربريس بالنجاح
-            window.dispatchEvent(new CustomEvent('SVS_LOG', { detail: { msg: '✅ تم جلب التلخيص ونقله لووردبريس بنجاح!', done: true } }));
-
-            const formatBtn = document.getElementById('svs_btn_format_final');
-            if (formatBtn) formatBtn.click();
-        } else {
-            alert("✅ تم جلب التلخيص! يرجى لصقه يدوياً في الخانة.");
+            // الضغط التلقائي على الزر الأخضر الجديد
+            setTimeout(() => { document.getElementById('svs_btn_format_premium').click(); }, 1000);
         }
     }
 });
