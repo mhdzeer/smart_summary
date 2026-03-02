@@ -1,8 +1,8 @@
 <?php
 /**
  * Plugin Name: Smart Article Management (Standalone)
- * Description: (V 1.2.1) - إدارة المقالات، كشف النواقص محلياً ومن يوتيوب، والنشر التلقائي.
- * Version: 1.2.1
+ * Description: (V 1.2.2) - إدارة المقالات، كشف النواقص محلياً ومن يوتيوب، والنشر التلقائي.
+ * Version: 1.2.2
  * Author: Abu Taher
  */
 
@@ -59,7 +59,7 @@ function sam_admin_page()
     ?>
         <div class="wrap sam-wrap">
             <div class="sam-header">
-                <h1 style="color:#fff; margin:0;">🚀 مدقق ومحرر المقالات الذكي (V 1.2.1)</h1>
+                <h1 style="color:#fff; margin:0;">🚀 مدقق ومحرر المقالات الذكي (V 1.2.2)</h1>
                 <p style="margin:5px 0 0 0;">إدارة، ترتيب، ومزامنة المقالات مع يوتيوب تلقائياً.</p>
             </div>
 
@@ -70,10 +70,12 @@ function sam_admin_page()
                         <div style="flex:1; min-width:250px;">
                             <label><b>ID القناة (YouTube Channel ID):</b></label>
                             <input type="text" name="sam_yt_channel_id" value="<?php echo esc_attr($yt_channel); ?>" class="sam-input" placeholder="مثال: UCxxxx...">
+                            <div class="sam-variable-hint">🔹 <a href="https://www.youtube.com/account_advanced" target="_blank">اضغط هنا للحصول على ID القناة</a></div>
                         </div>
                         <div style="flex:1; min-width:250px;">
                             <label><b>مفتاح API (Google Cloud):</b></label>
-                            <input type="password" name="sam_yt_api_key" value="<?php echo esc_attr($api_key); ?>" class="sam-input" placeholder="اختياري للبحث المتقدم">
+                            <input type="password" name="sam_yt_api_key" value="<?php echo esc_attr($api_key); ?>" class="sam-input" placeholder="AIzaSy...">
+                            <div class="sam-variable-hint">🔹 <a href="https://console.cloud.google.com/apis/library/youtube.googleapis.com" target="_blank">1. تفعيل المكتبة</a> | <a href="https://console.cloud.google.com/apis/credentials" target="_blank">2. أنشئ مفتاح API</a></div>
                         </div>
                         <div style="flex:1; min-width:250px;">
                             <label><b>قالب الأسماء الموحد:</b></label>
