@@ -1,8 +1,8 @@
 <?php
 /**
  * Plugin Name: Smart Article Management (Standalone)
- * Description: (V 1.3.0) - إدارة المقالات، كشف النواقص بدون API عبر المتصفح، والنشر التلقائي.
- * Version: 1.3.0
+ * Description: (V 1.3.1) - إدارة المقالات، كشف النواقص بدون API عبر المتصفح (إصلاح CORS)، والنشر التلقائي.
+ * Version: 1.3.1
  * Author: Abu Taher
  */
 
@@ -102,10 +102,16 @@ function sam_admin_page()
             </div>
 
             <div class="sam-card" style="border-right: 5px solid #f57c00;">
-                <h3>⚡ المزامنة بدون API (الزر الذكي):</h3>
-                <p>استخدم هذا الزر من داخل صفحة فيديوهات القناة في يوتيوب لجلب النواقص فوراً بدون استهلاك كوتا API.</p>
+                <h3>⚡ المزامنة بدون API (حل مشكلة Failed to fetch):</h3>
+                <p>استخدم هذا الزر من داخل صفحة فيديوهات القناة في يوتيوب لجلب النواقص فوراً.</p>
                 
                 <?php 
+                $saved_token = get_option('sam_access_token');
+                if (!$saved_token) {
+                    $saved_token = wp_generate_password(24, false);
+                    update_option('sam_access_token', $saved_token);
+                }
+                
                 $bookmarklet_code = "javascript:(function(){
                     var videos = [];
                     document.querySelectorAll('ytd-rich-grid-media, ytd-grid-video-renderer, ytd-video-renderer').forEach(function(el){
@@ -116,24 +122,25 @@ function sam_admin_page()
                         }
                     });
                     if(videos.length === 0) return alert('لم يتم العثور على فيديوهات! تأكد أنك في صفحة فيديوهات القناة.');
-                    var catId = prompt('أدخل رقم ID التصنيف المستهدف (موجود بجانب اسم التصنيف في الموقع):', '');
+                    var catId = prompt('أدخل رقم ID التصنيف المستهدف:', '');
                     if(!catId) return;
                     var formData = new FormData();
                     formData.append('action', 'sam_process_browser_data');
                     formData.append('cat_id', catId);
+                    formData.append('sam_token', '" . $saved_token . "');
                     formData.append('videos', JSON.stringify(videos));
-                    fetch('" . admin_url('admin-ajax.php') . "', {method: 'POST', body: formData})
+                    fetch('" . admin_url('admin-ajax.php') . "', {method: 'POST', body: formData, mode: 'cors'})
                     .then(r => r.json())
                     .then(d => {
-                        if(d.success) alert('✅ تم إرسال ' + videos.length + ' فيديو بنجاح! عد الآن لوردبريس واضغط فحص المقالات.');
+                        if(d.success) alert('✅ تم إرسال ' + videos.length + ' فيديو. عد الآن للموقع واضغط \"فحص المقالات\".');
                         else alert('❌ فشل الإرسال: ' + (d.data || 'خطأ غير معروف'));
                     }).catch(e => alert('❌ خطأ في الاتصال: ' + e));
                 })();";
                 ?>
                 <div style="background: #fdf6ec; padding: 15px; border-radius: 4px; border: 1px dashed #f57c00;">
-                    <p><b>طريقة الاستخدام:</b> اسحب الزر أدناه وضعه في شريط العلامات المرجعية (Bookmarks Bar) في متصفحك:</p>
-                    <a href="<?php echo $bookmarklet_code; ?>" style="display:inline-block; padding:8px 15px; background:#f57c00; color:#fff; text-decoration:none; border-radius:4px; font-weight:bold; cursor:move;">مزامنة يوتيوب ذكية 🚀</a>
-                    <p style="margin-top:10px; font-size:12px;">بمجرد وضعه في المتصفح، افتح قناتك في يوتيوب واضغط عليه وسيقوم بجلب كل الفيديوهات التي تظهر أمامك على الشاشة.</p>
+                    <p><b>⚠️ هام جداً (تحديث أمان):</b> يرجى <b>حذف الزر القديم</b> من متصفحك وسحب هذا الزر الجديد بدلاً منه:</p>
+                    <a href="<?php echo $bookmarklet_code; ?>" style="display:inline-block; padding:8px 15px; background:#f57c00; color:#fff; text-decoration:none; border-radius:4px; font-weight:bold; cursor:move;">مزامنة يوتيوب ذكية (نسخة مطورة) 🚀</a>
+                    <p style="margin-top:10px; font-size:12px; color:#d32f2f;">💡 هذا الزر يحتوي الآن على "مفتاح أمان" خاص بموقعك لحل مشكلة الاتصال التي واجهتها.</p>
                 </div>
             </div>
 
@@ -406,9 +413,27 @@ function sam_fetch_posts_callback()
 
 // استقبال البيانات من المتصفح (Bookmarklet)
 add_action('wp_ajax_sam_process_browser_data', 'sam_process_browser_data_callback');
+add_action('wp_ajax_nopriv_sam_process_browser_data', 'sam_process_browser_data_callback'); // للسماح بالاستقبال من نطاق خارجي (يوتيوب)
 function sam_process_browser_data_callback()
 {
-    if (!current_user_can('manage_options')) wp_send_json_error('صلاحيات غير كافية');
+    // السماح بالطلبات القادمة من يوتيوب (CORS) لحل مشكلة Failed to fetch
+    header("Access-Control-Allow-Origin: https://www.youtube.com");
+    header("Access-Control-Allow-Methods: POST, OPTIONS");
+    header("Access-Control-Allow-Headers: Content-Type, X-Requested-With");
+    
+    // التعامل مع طلب Preflight (OPTIONS)
+    if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
+        status_header(200);
+        exit;
+    }
+
+    $token = isset($_POST['sam_token']) ? sanitize_text_field($_POST['sam_token']) : '';
+    $saved_token = get_option('sam_access_token');
+
+    // التحقق من رمز الأمان عوضاً عن التحقق من تسجيل الدخول (لأن يوتيوب في نطاق مختلف)
+    if (!$saved_token || $token !== $saved_token) {
+        wp_send_json_error('رمز الأمان غير صحيح أو منتهي الصلاحية. يرجى إعادة تعيين الزر الذكي.');
+    }
 
     $cat_id = intval($_POST['cat_id']);
     $videos_json = isset($_POST['videos']) ? stripslashes($_POST['videos']) : '';
@@ -419,11 +444,9 @@ function sam_process_browser_data_callback()
     $cat_name = get_cat_name($cat_id);
     $filtered_items = [];
     
-    // الفلترة الذكية بناءً على اسم التصنيف المختار
     foreach ($videos as $vid) {
         if (mb_stripos($vid['title'], $cat_name) !== false) {
             $v_id = '';
-            // استخراج ID الفيديو من الرابط
             if (preg_match('/v=([^&]+)/', $vid['url'], $m)) {
                 $v_id = $m[1];
             } elseif (preg_match('/shorts\/([^?]+)/', $vid['url'], $m)) {
@@ -441,7 +464,6 @@ function sam_process_browser_data_callback()
 
     if (empty($filtered_items)) wp_send_json_error('لم يتم العثور على فيديوهات في الصفحة تحتوي على كلمة: ' . $cat_name);
 
-    // تخزين في Transient ليعرضه زر "فحص المقالات" مباشرة
     set_transient('sam_yt_cache_' . $cat_id, ['items' => $filtered_items], HOUR_IN_SECONDS);
     wp_send_json_success();
 }
