@@ -132,15 +132,15 @@ function sam_admin_page()
                     fetch('" . admin_url('admin-ajax.php') . "', {method: 'POST', body: formData, mode: 'cors'})
                     .then(r => r.json())
                     .then(d => {
-                        if(d.success) alert('✅ تم إرسال ' + videos.length + ' فيديو. عد الآن للموقع واضغط \"فحص المقالات\".');
+                        if(d.success) alert('✅ تم إرسال ' + videos.length + ' فيديو. عد الآن للموقع واضغط فحص المقالات.');
                         else alert('❌ فشل الإرسال: ' + (d.data || 'خطأ غير معروف'));
                     }).catch(e => alert('❌ خطأ في الاتصال: ' + e));
                 })();";
                 ?>
                 <div style="background: #fdf6ec; padding: 15px; border-radius: 4px; border: 1px dashed #f57c00;">
                     <p><b>⚠️ هام جداً (تحديث أمان):</b> يرجى <b>حذف الزر القديم</b> من متصفحك وسحب هذا الزر الجديد بدلاً منه:</p>
-                    <a href="<?php echo $bookmarklet_code; ?>" style="display:inline-block; padding:8px 15px; background:#f57c00; color:#fff; text-decoration:none; border-radius:4px; font-weight:bold; cursor:move;">مزامنة يوتيوب ذكية (نسخة مطورة) 🚀</a>
-                    <p style="margin-top:10px; font-size:12px; color:#d32f2f;">💡 هذا الزر يحتوي الآن على "مفتاح أمان" خاص بموقعك لحل مشكلة الاتصال التي واجهتها.</p>
+                    <a href="<?php echo esc_attr($bookmarklet_code); ?>" style="display:inline-block; padding:8px 15px; background:#f57c00; color:#fff; text-decoration:none; border-radius:4px; font-weight:bold; cursor:move;">مزامنة يوتيوب ذكية (نسخة مطورة) 🚀</a>
+                    <p style="margin-top:10px; font-size:12px; color:#d32f2f;">💡 هذا الزر يحتوي الآن على ميزة الـ CORS وحل مشكلة الـ Fetch.</p>
                 </div>
             </div>
 
