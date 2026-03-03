@@ -1,8 +1,8 @@
 <?php
 /**
  * Plugin Name: Smart Article Management (Standalone)
- * Description: (V 1.2.2) - إدارة المقالات، كشف النواقص محلياً ومن يوتيوب، والنشر التلقائي.
- * Version: 1.2.2
+ * Description: (V 1.2.3) - إدارة المقالات، كشف النواقص محلياً ومن يوتيوب، والنشر التلقائي.
+ * Version: 1.2.3
  * Author: Abu Taher
  */
 
@@ -24,7 +24,7 @@ function sam_styles()
         .sam-badge { padding: 4px 8px; border-radius: 4px; font-size: 11px; font-weight: bold; }
         .sam-badge-missing { background: #ffebee; color: #c62828; }
         .sam-badge-ok { background: #e8f5e9; color: #2e7d32; }
-        .sam-badge-yt { background: #fff3e0; color: #e65100; }
+        .sam-badge-yt { background: #e3f2fd; color: #0d47a1; }
         .sam-btn { padding: 10px 20px; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; font-family: "Cairo"; margin-left: 5px; }
         .sam-btn-primary { background: #1a73e8; color: #fff; }
         .sam-btn-success { background: #2e7d32; color: #fff; }
@@ -59,7 +59,7 @@ function sam_admin_page()
     ?>
         <div class="wrap sam-wrap">
             <div class="sam-header">
-                <h1 style="color:#fff; margin:0;">🚀 مدقق ومحرر المقالات الذكي (V 1.2.2)</h1>
+                <h1 style="color:#fff; margin:0;">🚀 مدقق ومحرر المقالات الذكي (V 1.2.3)</h1>
                 <p style="margin:5px 0 0 0;">إدارة، ترتيب، ومزامنة المقالات مع يوتيوب تلقائياً.</p>
             </div>
 
@@ -247,36 +247,31 @@ function sam_fetch_posts_callback()
     $cat_id = intval($_POST['cat_id']);
     $sync_yt = intval($_POST['sync_yt']);
     $cat_name = get_cat_name($cat_id);
-    $posts = get_posts(['category' => $cat_id, 'posts_per_page' => -1, 'orderby' => 'title', 'order' => 'ASC']);
+    $posts = get_posts(['category' => $cat_id, 'posts_per_page' => -1, 'post_status' => ['publish', 'draft', 'future', 'pending'], 'orderby' => 'title', 'order' => 'ASC']);
 
-    $html = '';
-    $post_items = [];
-    $existing_numbers = [];
+    $final_list = [];
+    $recorded_nums = [];
     $template = get_option('sam_title_template', '{cat} - الحلقة {n}');
 
     foreach ($posts as $p) {
         $num = sam_extract_number($p->post_title);
-        if ($num > 0)
-            $existing_numbers[$num] = true;
+        if ($num > 0) $recorded_nums[$num] = true;
         $suggested_title = str_replace(['{cat}', '{n}'], [$cat_name, $num], $template);
-        if ($num == 0)
-            $suggested_title = $p->post_title;
-        $post_items[] = ['id' => $p->ID, 'title' => $p->post_title, 'num' => $num, 'suggested' => $suggested_title];
+        if ($num == 0) $suggested_title = $p->post_title;
+        
+        $final_list[] = [
+            'id' => $p->ID,
+            'title' => $p->post_title,
+            'num' => $num,
+            'suggested' => $suggested_title,
+            'status_html' => '<span class="sam-badge sam-badge-ok">موجود (' . (get_post_status($p->ID) == 'publish' ? 'منشور' : 'مسودة') . ') ✅</span>',
+            'action_html' => '<button type="button" class="sam-btn sam-btn-primary sam-btn-update" data-id="' . $p->ID . '">تعديل</button>',
+            'row_style' => ''
+        ];
     }
 
-    usort($post_items, function ($a, $b) {
-        return $a['num'] - $b['num']; });
-    foreach ($post_items as $item) {
-        $html .= '<tr>';
-        $html .= '<td>' . ($item['num'] > 0 ? $item['num'] : '-') . '</td>';
-        $html .= '<td>' . esc_html($item['title']) . '</td>';
-        $html .= '<td><input type="text" class="sam-input sam-new-title" value="' . esc_attr($item['suggested']) . '"></td>';
-        $html .= '<td><span class="sam-badge sam-badge-ok">موجود ✅</span></td>';
-        $html .= '<td><button type="button" class="sam-btn sam-btn-primary sam-btn-update" data-id="' . $item['id'] . '">تعديل</button></td>';
-        $html .= '</tr>';
-    }
-
-    $yt_videos_by_num = [];
+    $yt_missing_count = 0;
+    $yt_error = '';
     if ($sync_yt) {
         $api_key = get_option('sam_yt_api_key');
         $channel_id = get_option('sam_yt_channel_id');
@@ -287,49 +282,75 @@ function sam_fetch_posts_callback()
                 if (isset($data['items'])) {
                     foreach ($data['items'] as $vid) {
                         $v_num = sam_extract_number($vid['snippet']['title']);
-                        if ($v_num > 0) {
-                            $yt_videos_by_num[$v_num] = [
-                                'title' => $vid['snippet']['title'],
-                                'url' => "https://www.youtube.com/watch?v=" . $vid['id']['videoId']
+                        if ($v_num > 0 && !isset($recorded_nums[$v_num])) {
+                            $yt_missing_count++;
+                            $v_suggested = str_replace(['{cat}', '{n}'], [$cat_name, $v_num], $template);
+                            $v_url = "https://www.youtube.com/watch?v=" . $vid['id']['videoId'];
+                            $video_data = ['title' => $v_suggested, 'url' => $v_url, 'num' => $v_num];
+
+                            $final_list[] = [
+                                'id' => 0,
+                                'title' => '🌐 نتيحة يوتيوب: ' . $vid['snippet']['title'],
+                                'num' => $v_num,
+                                'suggested' => $v_suggested,
+                                'status_html' => '<span class="sam-badge sam-badge-yt">متاح في يوتيوب 📺</span>',
+                                'action_html' => '<button type="button" class="sam-btn sam-btn-warning sam-btn-create-one" data-video=\'' . esc_attr(json_encode($video_data)) . '\'>نشر الآن</button>',
+                                'row_style' => 'background:#e3f2fd;'
                             ];
+                            $recorded_nums[$v_num] = 'yt';
                         }
                     }
+                } elseif (isset($data['error'])) {
+                    $yt_error = "خطأ يوتيوب: " . $data['error']['message'];
+                }
+            } else {
+                $yt_error = "خطأ في الاتصال بيوتيوب: " . $response->get_error_message();
+            }
+        } else {
+            $yt_error = "يرجى ضبط مفتاح API و ID القناة أولاً.";
+        }
+    }
+
+    if (!empty($recorded_nums)) {
+        $only_nums = array_filter(array_keys($recorded_nums), 'is_numeric');
+        if (!empty($only_nums)) {
+            $min = min($only_nums);
+            $max = max($only_nums);
+            for ($i = $min; $i <= $max; $i++) {
+                if (!isset($recorded_nums[$i])) {
+                    $final_list[] = [
+                        'id' => 0,
+                        'title' => '❌ حلقة مفقودة (رقم ' . $i . ')',
+                        'num' => $i,
+                        'suggested' => '-',
+                        'status_html' => '<span class="sam-badge sam-badge-missing">مفقود تماماً ⚠️</span>',
+                        'action_html' => '-',
+                        'row_style' => 'background:#fff5f5;'
+                    ];
                 }
             }
         }
     }
 
-    $yt_missing_count = 0;
-    if (!empty($existing_numbers)) {
-        $found_nums = array_keys($existing_numbers);
-        $min = min($found_nums);
-        $max = max($found_nums);
-        for ($i = $min; $i <= $max; $i++) {
-            if (!isset($existing_numbers[$i])) {
-                $html .= '<tr style="background:#fff5f5;">';
-                $html .= '<td>' . $i . '</td>';
-                if (isset($yt_videos_by_num[$i])) {
-                    $yt_missing_count++;
-                    $v_suggested = str_replace(['{cat}', '{n}'], [$cat_name, $i], $template);
-                    $video_data = ['title' => $v_suggested, 'url' => $yt_videos_by_num[$i]['url'], 'num' => $i];
-                    $html .= '<td style="color:#e65100;">🌐 وجدنا الحلقة في يوتيوب: ' . esc_html($yt_videos_by_num[$i]['title']) . '</td>';
-                    $html .= '<td>' . $v_suggested . '</td>';
-                    $html .= '<td><span class="sam-badge sam-badge-yt">متاح في يوتيوب 📺</span></td>';
-                    $html .= '<td><button type="button" class="sam-btn sam-btn-warning sam-btn-create-one" data-video=\'' . json_encode($video_data) . '\'>نشر الآن</button></td>';
-                } else {
-                    $html .= '<td style="color:#c62828;">❌ حلقة مفقودة (رقم ' . $i . ')</td>';
-                    $html .= '<td>-</td>';
-                    $html .= '<td><span class="sam-badge sam-badge-missing">مفقود تماماً ⚠️</span></td>';
-                    $html .= '<td>-</td>';
-                }
-                $html .= '</tr>';
-            }
-        }
+    usort($final_list, function ($a, $b) { return $a['num'] - $b['num']; });
+
+    $html = '';
+    foreach ($final_list as $item) {
+        $html .= '<tr style="' . $item['row_style'] . '">';
+        $html .= '<td>' . ($item['num'] > 0 ? $item['num'] : '-') . '</td>';
+        $html .= '<td>' . esc_html($item['title']) . '</td>';
+        $html .= '<td><input type="text" class="sam-input sam-new-title" value="' . esc_attr($item['suggested']) . '" ' . ($item['id'] == 0 ? 'readonly' : '') . '></td>';
+        $html .= '<td>' . $item['status_html'] . '</td>';
+        $html .= '<td>' . $item['action_html'] . '</td>';
+        $html .= '</tr>';
     }
 
     $summary = "إجمالي المقالات الموجودة: " . count($posts);
-    if ($sync_yt)
-        $summary .= " | تم العثور على " . $yt_missing_count . " حلقة في يوتيوب جاهزة للنشر.";
+    if ($sync_yt) {
+        if ($yt_error) $summary .= " | <span style='color:red;'>⚠️ " . $yt_error . "</span>";
+        else $summary .= " | تم العثور على " . $yt_missing_count . " حلقة في يوتيوب جاهزة للنشر.";
+    }
+
     wp_send_json_success(['html' => $html, 'summary' => $summary, 'has_yt_missing' => ($yt_missing_count > 0)]);
 }
 
@@ -340,8 +361,19 @@ function sam_create_post_callback()
     $title = sanitize_text_field($_POST['title']);
     $cat_id = intval($_POST['cat_id']);
     if ($video_url && $title) {
-        $content = "رابط الفيديو: " . $video_url . "\n\n(سيتم تلخيص هذا الفيديو تلقائياً)";
-        $new_post = ['post_title' => $title, 'post_content' => $content, 'post_status' => 'draft', 'post_category' => [$cat_id]];
+        // بناء محتوى المقال كما طلب المستخدم (العنوان + الرابط)
+        $content = "<!-- " . esc_html($title) . " -->\n";
+        $content .= "<h3>" . esc_html($title) . "</h3>\n";
+        $content .= "<p>شاهد الحلقة مباشرة من هنا: <a href='" . esc_url($video_url) . "' target='_blank'>" . esc_url($video_url) . "</a></p>\n";
+        $content .= "\n" . esc_url($video_url) . "\n"; // تضمين الرابط ليقوم وردبريس بتحويله لفيديو تلقائياً
+        $content .= "\n\n(تمت إضافة هذا المقال تلقائياً عبر نظام إدارة المقالات الذكي)";
+
+        $new_post = [
+            'post_title' => $title,
+            'post_content' => $content,
+            'post_status' => 'draft',
+            'post_category' => [$cat_id]
+        ];
         if (wp_insert_post($new_post))
             wp_send_json_success();
     }
