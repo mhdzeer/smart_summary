@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html dir="rtl" lang="ar">
+<head>
+    <meta charset="UTF-8">
+    <title>YouTube WP Sync</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: 'Segoe UI', Arial, sans-serif;
+            width: 320px;
+            background: #f0f2f5;
+            color: #333;
+        }
+        .header {
+            background: linear-gradient(135deg, #1a73e8, #0d47a1);
+            color: white;
+            padding: 16px;
+            text-align: center;
+        }
+        .header h1 { font-size: 16px; margin-bottom: 4px; }
+        .header p { font-size: 11px; opacity: 0.85; }
+        .body { padding: 14px; }
+        .field { margin-bottom: 12px; }
+        label { display: block; font-size: 12px; font-weight: bold; margin-bottom: 4px; color: #555; }
+        input {
+            width: 100%;
+            padding: 8px 10px;
+            border: 1px solid #ccc;
+            border-radius: 6px;
+            font-size: 13px;
+            direction: ltr;
+        }
+        input:focus { outline: none; border-color: #1a73e8; }
+        .btn {
+            width: 100%;
+            padding: 10px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: bold;
+            margin-top: 6px;
+            transition: opacity 0.2s;
+        }
+        .btn:hover { opacity: 0.88; }
+        .btn-primary { background: #1a73e8; color: white; }
+        .btn-success { background: #2e7d32; color: white; }
+        .btn-save { background: #555; color: white; font-size: 12px; padding: 7px; }
+        #status {
+            margin-top: 12px;
+            padding: 10px;
+            border-radius: 6px;
+            font-size: 13px;
+            text-align: center;
+            display: none;
+        }
+        .status-ok { background: #e8f5e9; color: #2e7d32; border: 1px solid #a5d6a7; }
+        .status-err { background: #ffebee; color: #c62828; border: 1px solid #ef9a9a; }
+        .status-info { background: #e3f2fd; color: #0d47a1; border: 1px solid #90caf9; }
+        .divider { border: none; border-top: 1px solid #ddd; margin: 12px 0; }
+        .hint { font-size: 11px; color: #888; margin-top: 3px; }
+        #video_count { font-weight: bold; color: #1a73e8; }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>🔗 YouTube WP Sync</h1>
+        <p>مزامنة فيديوهات يوتيوب مع وردبريس</p>
+    </div>
+    <div class="body">
+        <div class="field">
+            <label>🌐 رابط موقع وردبريس:</label>
+            <input type="url" id="wp_url" placeholder="https://yoursite.com" />
+            <div class="hint">مثال: https://yoursite.com</div>
+        </div>
+        <div class="field">
+            <label>🔑 رمز الأمان (Access Token):</label>
+            <input type="text" id="wp_token" placeholder="من إعدادات الإضافة في WP" />
+            <div class="hint">انسخه من صفحة "إدارة المقالات" في موقعك</div>
+        </div>
+        <div class="field">
+            <label>📂 ID التصنيف المستهدف:</label>
+            <input type="number" id="cat_id" placeholder="مثال: 38" />
+            <div class="hint">يظهر بجانب اسم التصنيف في قائمة الإضافة</div>
+        </div>
+        <button class="btn btn-save" id="btn_save">💾 حفظ الإعدادات</button>
+        <hr class="divider">
+        <div id="video_info" style="font-size:12px; color:#555; margin-bottom:8px; text-align:center; display:none;">
+            تم رصد <span id="video_count">0</span> فيديو في الصفحة الحالية
+        </div>
+        <button class="btn btn-primary" id="btn_scan">🔍 استيراد الفيديوهات من هذه الصفحة</button>
+        <div id="status"></div>
+    </div>
+    <script src="popup.js"></script>
+</body>
+</html>
