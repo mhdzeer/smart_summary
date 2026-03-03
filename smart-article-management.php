@@ -280,7 +280,9 @@ function sam_fetch_posts_callback()
             $data = get_transient($transient_name);
 
             if ($data === false) {
-                $response = wp_remote_get("https://www.googleapis.com/youtube/v3/search?key={$api_key}&channelId={$channel_id}&part=snippet,id&order=date&maxResults=50&type=video&q=" . urlencode($cat_name));
+                $response = wp_remote_get("https://www.googleapis.com/youtube/v3/search?key={$api_key}&channelId={$channel_id}&part=snippet,id&order=date&maxResults=50&type=video&q=" . urlencode($cat_name), [
+                    'timeout' => 20, // زيادة وقت الانتظار لتجنب الـ Timeout
+                ]);
                 if (!is_wp_error($response)) {
                     $data = json_decode(wp_remote_retrieve_body($response), true);
                     if (isset($data['items'])) {
