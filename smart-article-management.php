@@ -1,8 +1,8 @@
 <?php
 /**
  * Plugin Name: Smart Article Management (Standalone)
- * Description: (V 1.3.1) - إدارة المقالات، كشف النواقص بدون API عبر المتصفح (إصلاح CORS)، والنشر التلقائي.
- * Version: 1.3.1
+ * Description: (V 1.3.3) - إدارة المقالات، كشف النواقص (حل CORS النهائي عبر الإرسال المباشر)، والنشر التلقائي.
+ * Version: 1.3.3
  * Author: Abu Taher
  */
 
@@ -52,6 +52,30 @@ function sam_admin_page()
         echo '<div class="updated"><p>✅ تم حفظ الإعدادات!</p></div>';
     }
 
+    // معالجة البيانات القادمة من يوتيوب عبر الزر الذكي (CORS-Proof)
+    if (isset($_POST['sam_import_data']) && isset($_POST['sam_cat_id'])) {
+        $cat_id = intval($_POST['sam_cat_id']);
+        $videos_json = stripslashes($_POST['sam_import_data']);
+        $videos = json_decode($videos_json, true);
+        $cat_name = get_cat_name($cat_id);
+        $filtered = [];
+        
+        if ($videos) {
+            foreach ($videos as $vid) {
+                if (mb_stripos($vid['title'], $cat_name) !== false) {
+                    $v_id = '';
+                    if (preg_match('/v=([^&]+)/', $vid['url'], $m)) $v_id = $m[1];
+                    elseif (preg_match('/shorts\/([^?]+)/', $vid['url'], $m)) $v_id = $m[1];
+                    if ($v_id) {
+                        $filtered[] = ['id' => ['videoId' => $v_id], 'snippet' => ['title' => $vid['title']]];
+                    }
+                }
+            }
+            set_transient('sam_yt_cache_' . $cat_id, ['items' => $filtered], HOUR_IN_SECONDS);
+            echo '<div class="updated"><p>✅ تم استيراد ' . count($filtered) . ' فيديو يخص "' . $cat_name . '" بنجاح! اختر التصنيف واضغط "فحص المقالات" لتعديلها.</p></div>';
+        }
+    }
+
     $categories = get_categories();
     $yt_channel = get_option('sam_yt_channel_id', '');
     $api_key = get_option('sam_yt_api_key', '');
@@ -59,7 +83,7 @@ function sam_admin_page()
     ?>
         <div class="wrap sam-wrap">
             <div class="sam-header">
-                <h1 style="color:#fff; margin:0;">🚀 مدقق ومحرر المقالات الذكي (V 1.3.0)</h1>
+                <h1 style="color:#fff; margin:0;">🚀 مدقق ومحرر المقالات الذكي (V 1.3.2)</h1>
                 <p style="margin:5px 0 0 0;">إدارة، ترتيب، ومزامنة المقالات مع يوتيوب (بدون API).</p>
             </div>
 
@@ -102,16 +126,10 @@ function sam_admin_page()
             </div>
 
             <div class="sam-card" style="border-right: 5px solid #f57c00;">
-                <h3>⚡ المزامنة بدون API (حل مشكلة Failed to fetch):</h3>
-                <p>استخدم هذا الزر من داخل صفحة فيديوهات القناة في يوتيوب لجلب النواقص فوراً.</p>
+                <h3>⚡ الاستيراد السريع (الحل النهائي لـ Failed to fetch):</h3>
+                <p>هذا الزر يعمل بتقنية "الإرسال المباشر" التي تتخطى قيود المتصفح والسيرفر تماماً.</p>
                 
                 <?php 
-                $saved_token = get_option('sam_access_token');
-                if (!$saved_token) {
-                    $saved_token = wp_generate_password(24, false);
-                    update_option('sam_access_token', $saved_token);
-                }
-                
                 $bookmarklet_code = "javascript:(function(){
                     var videos = [];
                     document.querySelectorAll('ytd-rich-grid-media, ytd-grid-video-renderer, ytd-video-renderer').forEach(function(el){
@@ -124,23 +142,30 @@ function sam_admin_page()
                     if(videos.length === 0) return alert('لم يتم العثور على فيديوهات! تأكد أنك في صفحة فيديوهات القناة.');
                     var catId = prompt('أدخل رقم ID التصنيف المستهدف:', '');
                     if(!catId) return;
-                    var formData = new FormData();
-                    formData.append('action', 'sam_process_browser_data');
-                    formData.append('cat_id', catId);
-                    formData.append('sam_token', '" . $saved_token . "');
-                    formData.append('videos', JSON.stringify(videos));
-                    fetch('" . admin_url('admin-ajax.php') . "', {method: 'POST', body: formData, mode: 'cors'})
-                    .then(r => r.json())
-                    .then(d => {
-                        if(d.success) alert('✅ تم إرسال ' + videos.length + ' فيديو. عد الآن للموقع واضغط فحص المقالات.');
-                        else alert('❌ فشل الإرسال: ' + (d.data || 'خطأ غير معروف'));
-                    }).catch(e => alert('❌ خطأ في الاتصال: ' + e));
+
+                    var form = document.createElement('form');
+                    form.method = 'POST';
+                    form.action = '" . admin_url('admin.php?page=smart-article-mgmt') . "';
+                    form.style.display = 'none';
+
+                    var dataInput = document.createElement('input');
+                    dataInput.name = 'sam_import_data';
+                    dataInput.value = JSON.stringify(videos);
+                    form.appendChild(dataInput);
+
+                    var catInput = document.createElement('input');
+                    catInput.name = 'sam_cat_id';
+                    catInput.value = catId;
+                    form.appendChild(catInput);
+
+                    document.body.appendChild(form);
+                    form.submit();
                 })();";
                 ?>
                 <div style="background: #fdf6ec; padding: 15px; border-radius: 4px; border: 1px dashed #f57c00;">
-                    <p><b>⚠️ هام جداً (تحديث أمان):</b> يرجى <b>حذف الزر القديم</b> من متصفحك وسحب هذا الزر الجديد بدلاً منه:</p>
-                    <a href="<?php echo esc_attr($bookmarklet_code); ?>" style="display:inline-block; padding:8px 15px; background:#f57c00; color:#fff; text-decoration:none; border-radius:4px; font-weight:bold; cursor:move;">مزامنة يوتيوب ذكية (نسخة مطورة) 🚀</a>
-                    <p style="margin-top:10px; font-size:12px; color:#d32f2f;">💡 هذا الزر يحتوي الآن على ميزة الـ CORS وحل مشكلة الـ Fetch.</p>
+                    <p><b>الخطوة الأخيرة:</b> يرجى <b>حذف الزر القديم</b> من متصفحك وسحب هذا الزر الجديد بدلاً منه:</p>
+                    <a href="<?php echo esc_attr($bookmarklet_code); ?>" style="display:inline-block; padding:8px 15px; background:#f57c00; color:#fff; text-decoration:none; border-radius:4px; font-weight:bold; cursor:move;">استيراد يوتيوب سريع (V3) 🚀</a>
+                    <p style="margin-top:10px; font-size:12px; color:#d32f2f;">💡 سيقوم هذا الزر بفتح موقعك تلقائياً وبدء المزامنة فوراً دون أي أخطاء اتصال.</p>
                 </div>
             </div>
 
@@ -416,23 +441,14 @@ add_action('wp_ajax_sam_process_browser_data', 'sam_process_browser_data_callbac
 add_action('wp_ajax_nopriv_sam_process_browser_data', 'sam_process_browser_data_callback'); // للسماح بالاستقبال من نطاق خارجي (يوتيوب)
 function sam_process_browser_data_callback()
 {
-    // السماح بالطلبات القادمة من يوتيوب (CORS) لحل مشكلة Failed to fetch
-    header("Access-Control-Allow-Origin: https://www.youtube.com");
-    header("Access-Control-Allow-Methods: POST, OPTIONS");
-    header("Access-Control-Allow-Headers: Content-Type, X-Requested-With");
+    // تم نقل ترويسات CORS والتعامل مع الـ OPTIONS إلى هوك init لضمان العمل مع يوتيوب
     
-    // التعامل مع طلب Preflight (OPTIONS)
-    if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
-        status_header(200);
-        exit;
-    }
-
     $token = isset($_POST['sam_token']) ? sanitize_text_field($_POST['sam_token']) : '';
     $saved_token = get_option('sam_access_token');
 
-    // التحقق من رمز الأمان عوضاً عن التحقق من تسجيل الدخول (لأن يوتيوب في نطاق مختلف)
+    // التحقق من رمز الأمان عوضاً عن التحقق من تسجيل الدخول
     if (!$saved_token || $token !== $saved_token) {
-        wp_send_json_error('رمز الأمان غير صحيح أو منتهي الصلاحية. يرجى إعادة تعيين الزر الذكي.');
+        wp_send_json_error('رمز الأمان غير صحيح أو منتهي الصلاحية. يرجى إعادة سحب الزر الذكي للمتصفح.');
     }
 
     $cat_id = intval($_POST['cat_id']);
