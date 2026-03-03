@@ -1,8 +1,8 @@
 <?php
 /**
  * Plugin Name: Smart Article Management (Standalone)
- * Description: (V 1.2.3) - إدارة المقالات، كشف النواقص محلياً ومن يوتيوب، والنشر التلقائي.
- * Version: 1.2.3
+ * Description: (V 1.3.0) - إدارة المقالات، كشف النواقص بدون API عبر المتصفح، والنشر التلقائي.
+ * Version: 1.3.0
  * Author: Abu Taher
  */
 
@@ -59,8 +59,8 @@ function sam_admin_page()
     ?>
         <div class="wrap sam-wrap">
             <div class="sam-header">
-                <h1 style="color:#fff; margin:0;">🚀 مدقق ومحرر المقالات الذكي (V 1.2.3)</h1>
-                <p style="margin:5px 0 0 0;">إدارة، ترتيب، ومزامنة المقالات مع يوتيوب تلقائياً.</p>
+                <h1 style="color:#fff; margin:0;">🚀 مدقق ومحرر المقالات الذكي (V 1.3.0)</h1>
+                <p style="margin:5px 0 0 0;">إدارة، ترتيب، ومزامنة المقالات مع يوتيوب (بدون API).</p>
             </div>
 
             <div class="sam-card">
@@ -89,15 +89,52 @@ function sam_admin_page()
 
             <div class="sam-card">
                 <h3>🔍 اختر التصنيف للفحص والمزامنة:</h3>
+                <p style="font-size:12px; color:#666;">اختر التصنيف أولاً، ثم اضغط "فحص" أو استخدم الزر الذكي في يوتيوب.</p>
                 <select id="sam_cat_select" class="sam-input" style="max-width:300px;">
                     <option value="">-- اختر التصنيف --</option>
                     <?php foreach ($categories as $cat): ?>
-                            <option value="<?php echo $cat->term_id; ?>"><?php echo esc_html($cat->name); ?> (<?php echo $cat->count; ?>)</option>
+                            <option value="<?php echo $cat->term_id; ?>"><?php echo esc_html($cat->name); ?> (ID: <?php echo $cat->term_id; ?> | <?php echo $cat->count; ?>)</option>
                     <?php endforeach; ?>
                 </select>
                 <button type="button" id="sam_btn_fetch" class="sam-btn sam-btn-primary">فحص المقالات</button>
-                <button type="button" id="sam_btn_yt_sync" class="sam-btn sam-btn-warning">🔍 ابحث في يوتيوب عن النواقص</button>
+                <button type="button" id="sam_btn_yt_sync" class="sam-btn sam-btn-warning">🔍 ابحث عبر API (اختياري)</button>
                 <span id="sam_loading">⏳ جاري العمل...</span>
+            </div>
+
+            <div class="sam-card" style="border-right: 5px solid #f57c00;">
+                <h3>⚡ المزامنة بدون API (الزر الذكي):</h3>
+                <p>استخدم هذا الزر من داخل صفحة فيديوهات القناة في يوتيوب لجلب النواقص فوراً بدون استهلاك كوتا API.</p>
+                
+                <?php 
+                $bookmarklet_code = "javascript:(function(){
+                    var videos = [];
+                    document.querySelectorAll('ytd-rich-grid-media, ytd-grid-video-renderer, ytd-video-renderer').forEach(function(el){
+                        var titleEl = el.querySelector('#video-title');
+                        var linkEl = el.querySelector('a#video-title, a#video-title-link, a.ytd-video-renderer, #thumbnail a');
+                        if(titleEl && linkEl) {
+                            videos.push({title: titleEl.innerText.trim(), url: linkEl.href});
+                        }
+                    });
+                    if(videos.length === 0) return alert('لم يتم العثور على فيديوهات! تأكد أنك في صفحة فيديوهات القناة.');
+                    var catId = prompt('أدخل رقم ID التصنيف المستهدف (موجود بجانب اسم التصنيف في الموقع):', '');
+                    if(!catId) return;
+                    var formData = new FormData();
+                    formData.append('action', 'sam_process_browser_data');
+                    formData.append('cat_id', catId);
+                    formData.append('videos', JSON.stringify(videos));
+                    fetch('" . admin_url('admin-ajax.php') . "', {method: 'POST', body: formData})
+                    .then(r => r.json())
+                    .then(d => {
+                        if(d.success) alert('✅ تم إرسال ' + videos.length + ' فيديو بنجاح! عد الآن لوردبريس واضغط فحص المقالات.');
+                        else alert('❌ فشل الإرسال: ' + (d.data || 'خطأ غير معروف'));
+                    }).catch(e => alert('❌ خطأ في الاتصال: ' + e));
+                })();";
+                ?>
+                <div style="background: #fdf6ec; padding: 15px; border-radius: 4px; border: 1px dashed #f57c00;">
+                    <p><b>طريقة الاستخدام:</b> اسحب الزر أدناه وضعه في شريط العلامات المرجعية (Bookmarks Bar) في متصفحك:</p>
+                    <a href="<?php echo $bookmarklet_code; ?>" style="display:inline-block; padding:8px 15px; background:#f57c00; color:#fff; text-decoration:none; border-radius:4px; font-weight:bold; cursor:move;">مزامنة يوتيوب ذكية 🚀</a>
+                    <p style="margin-top:10px; font-size:12px;">بمجرد وضعه في المتصفح، افتح قناتك في يوتيوب واضغط عليه وسيقوم بجلب كل الفيديوهات التي تظهر أمامك على الشاشة.</p>
+                </div>
             </div>
 
             <div id="sam_result_area" style="display:none;">
@@ -365,6 +402,48 @@ function sam_fetch_posts_callback()
     }
 
     wp_send_json_success(['html' => $html, 'summary' => $summary, 'has_yt_missing' => ($yt_missing_count > 0)]);
+}
+
+// استقبال البيانات من المتصفح (Bookmarklet)
+add_action('wp_ajax_sam_process_browser_data', 'sam_process_browser_data_callback');
+function sam_process_browser_data_callback()
+{
+    if (!current_user_can('manage_options')) wp_send_json_error('صلاحيات غير كافية');
+
+    $cat_id = intval($_POST['cat_id']);
+    $videos_json = isset($_POST['videos']) ? stripslashes($_POST['videos']) : '';
+    $videos = json_decode($videos_json, true);
+
+    if (!$cat_id || empty($videos)) wp_send_json_error('بيانات غير مكتملة أو لم يتم العثور على فيديوهات');
+
+    $cat_name = get_cat_name($cat_id);
+    $filtered_items = [];
+    
+    // الفلترة الذكية بناءً على اسم التصنيف المختار
+    foreach ($videos as $vid) {
+        if (mb_stripos($vid['title'], $cat_name) !== false) {
+            $v_id = '';
+            // استخراج ID الفيديو من الرابط
+            if (preg_match('/v=([^&]+)/', $vid['url'], $m)) {
+                $v_id = $m[1];
+            } elseif (preg_match('/shorts\/([^?]+)/', $vid['url'], $m)) {
+                $v_id = $m[1];
+            }
+
+            if (!$v_id) continue;
+
+            $filtered_items[] = [
+                'id' => ['videoId' => $v_id],
+                'snippet' => ['title' => $vid['title']]
+            ];
+        }
+    }
+
+    if (empty($filtered_items)) wp_send_json_error('لم يتم العثور على فيديوهات في الصفحة تحتوي على كلمة: ' . $cat_name);
+
+    // تخزين في Transient ليعرضه زر "فحص المقالات" مباشرة
+    set_transient('sam_yt_cache_' . $cat_id, ['items' => $filtered_items], HOUR_IN_SECONDS);
+    wp_send_json_success();
 }
 
 add_action('wp_ajax_sam_create_post', 'sam_create_post_callback');
