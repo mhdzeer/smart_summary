@@ -276,9 +276,22 @@ function sam_fetch_posts_callback()
         $api_key = get_option('sam_yt_api_key');
         $channel_id = get_option('sam_yt_channel_id');
         if ($api_key && $channel_id) {
-            $response = wp_remote_get("https://www.googleapis.com/youtube/v3/search?key={$api_key}&channelId={$channel_id}&part=snippet,id&order=date&maxResults=50&type=video&q=" . urlencode($cat_name));
-            if (!is_wp_error($response)) {
-                $data = json_decode(wp_remote_retrieve_body($response), true);
+            $transient_name = 'sam_yt_cache_' . $cat_id;
+            $data = get_transient($transient_name);
+
+            if ($data === false) {
+                $response = wp_remote_get("https://www.googleapis.com/youtube/v3/search?key={$api_key}&channelId={$channel_id}&part=snippet,id&order=date&maxResults=50&type=video&q=" . urlencode($cat_name));
+                if (!is_wp_error($response)) {
+                    $data = json_decode(wp_remote_retrieve_body($response), true);
+                    if (isset($data['items'])) {
+                        set_transient($transient_name, $data, HOUR_IN_SECONDS); // تخزين النتائج لمدة ساعة لتقليل استهلاك الكوتا
+                    }
+                } else {
+                    $yt_error = "خطأ في الاتصال بيوتيوب: " . $response->get_error_message();
+                }
+            }
+
+            if ($data) {
                 if (isset($data['items'])) {
                     foreach ($data['items'] as $vid) {
                         $v_num = sam_extract_number($vid['snippet']['title']);
@@ -290,7 +303,7 @@ function sam_fetch_posts_callback()
 
                             $final_list[] = [
                                 'id' => 0,
-                                'title' => '🌐 نتيحة يوتيوب: ' . $vid['snippet']['title'],
+                                'title' => '🌐 نتيجة يوتيوب: ' . $vid['snippet']['title'],
                                 'num' => $v_num,
                                 'suggested' => $v_suggested,
                                 'status_html' => '<span class="sam-badge sam-badge-yt">متاح في يوتيوب 📺</span>',
@@ -303,8 +316,6 @@ function sam_fetch_posts_callback()
                 } elseif (isset($data['error'])) {
                     $yt_error = "خطأ يوتيوب: " . $data['error']['message'];
                 }
-            } else {
-                $yt_error = "خطأ في الاتصال بيوتيوب: " . $response->get_error_message();
             }
         } else {
             $yt_error = "يرجى ضبط مفتاح API و ID القناة أولاً.";
